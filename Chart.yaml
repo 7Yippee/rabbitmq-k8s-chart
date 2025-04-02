@@ -1,0 +1,13 @@
+apiVersion: v2
+name: rabbitmq-chart
+description: A Helm chart for RabbitMQ on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "3.9.12"
+keywords:
+  - rabbitmq
+  - message queue
+  - AMQP
+maintainers:
+  - name: Your Name
+    email: your.email@example.com 

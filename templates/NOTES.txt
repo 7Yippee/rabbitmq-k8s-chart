@@ -1,0 +1,37 @@
+RabbitMQ 集群已经成功部署！
+
+1. 获取 RabbitMQ 管理界面 URL:
+
+   {{- if contains "NodePort" .Values.rabbitmq.service.type }}
+   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[?(@.name=='stats')].nodePort}" services {{ include "rabbitmq-chart.fullname" . }})
+   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+   echo "RabbitMQ 管理界面: http://$NODE_IP:$NODE_PORT/"
+   
+   {{- else if contains "LoadBalancer" .Values.rabbitmq.service.type }}
+   注意: 可能需要几分钟才能分配外部 IP 地址
+   export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "rabbitmq-chart.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+   echo "RabbitMQ 管理界面: http://$SERVICE_IP:15672/"
+   
+   {{- else if contains "ClusterIP" .Values.rabbitmq.service.type }}
+   kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "rabbitmq-chart.fullname" . }} 15672:15672
+   echo "RabbitMQ 管理界面: http://127.0.0.1:15672/"
+   {{- end }}
+
+2. 获取 RabbitMQ 用户名和密码:
+
+   用户名: {{ .Values.rabbitmq.auth.username }}
+   {{- if .Values.rabbitmq.auth.existingSecret }}
+   密码: 已存储在 Secret '{{ .Values.rabbitmq.auth.existingSecret }}' 中
+   echo $(kubectl get secret --namespace {{ .Release.Namespace }} {{ .Values.rabbitmq.auth.existingSecret }} -o jsonpath="{.data.rabbitmq-password}" | base64 --decode)
+   {{- else }}
+   密码: 请设置 rabbitmq.auth.existingSecret 值
+   {{- end }}
+
+3. 连接到 RabbitMQ:
+
+   AMQP 端口: {{ .Values.rabbitmq.service.ports.amqp }}
+   主机: {{ include "rabbitmq-chart.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+
+4. 查看 RabbitMQ 集群状态:
+
+   kubectl exec -it {{ include "rabbitmq-chart.fullname" . }}-0 --namespace {{ .Release.Namespace }} -- rabbitmqctl cluster_status 

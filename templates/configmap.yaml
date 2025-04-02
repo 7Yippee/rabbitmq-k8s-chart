@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rabbitmq-chart.fullname" . }}-config
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    {{- include "rabbitmq-chart.labels" . | nindent 4 }}
+data:
+  rabbitmq.conf: |
+    ## Username and password
+    default_user = {{ .Values.rabbitmq.auth.username }}
+    # Password is stored in Secret
+    
+    ## Clustering
+    cluster_formation.peer_discovery_backend = rabbit_peer_discovery_k8s
+    cluster_formation.k8s.host = kubernetes.default.svc.cluster.local
+    cluster_formation.k8s.address_type = hostname
+    cluster_formation.k8s.service_name = {{ include "rabbitmq-chart.fullname" . }}-headless
+    cluster_formation.k8s.hostname_suffix = .{{ include "rabbitmq-chart.fullname" . }}-headless.$(MY_POD_NAMESPACE).svc.cluster.local
+    cluster_formation.node_cleanup.interval = 10
+    cluster_formation.node_cleanup.only_log_warning = true
+    cluster_partition_handling = autoheal
+    
+    # queue master locator
+    queue_master_locator = min-masters
+    
+    # enable guest user
+    loopback_users.guest = false
+    
+    {{- if .Values.rabbitmq.vhost }}
+    default_vhost = {{ .Values.rabbitmq.vhost }}
+    {{- end }}
+    
+    {{- if .Values.rabbitmq.diskFreeLimit }}
+    disk_free_limit.absolute = {{ .Values.rabbitmq.diskFreeLimit }}
+    {{- else }}
+    disk_free_limit.relative = 1.0
+    {{- end }}
+    
+    {{- if eq .Values.rabbitmq.configuration.loadDefinitions "yes" }}
+    load_definitions = /app/load_definition.json
+    {{- end }}
+    
+    ## Prometheus metrics
+    prometheus.tcp.port = 9419
+    
+    ## Memory Threshold
+    {{- if .Values.rabbitmq.totalMemoryAvailable }}
+    total_memory_available_override_value = {{ .Values.rabbitmq.totalMemoryAvailable }}
+    {{- end }}
+    vm_memory_high_watermark.relative = {{ .Values.rabbitmq.memoryHighWatermark | default "0.4" }}
+    
+    ## Logging
+    log.file = false
+    log.console = true
+    log.console.level = {{ if .Values.rabbitmq.configuration.debug }}debug{{ else }}info{{ end }}

@@ -1,0 +1,184 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "rabbitmq-chart.fullname" . }}
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    {{- include "rabbitmq-chart.labels" . | nindent 4 }}
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: {{ .Values.rabbitmq.replicaCount }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      {{- include "rabbitmq-chart.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "rabbitmq-chart.fullname" . }}-headless
+  template:
+    metadata:
+      labels:
+        {{- include "rabbitmq-chart.labels" . | nindent 8 }}
+    spec:
+      {{- if .Values.antiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: {{ .Values.antiAffinity.weight }}
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  {{- include "rabbitmq-chart.selectorLabels" . | nindent 16 }}
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      containers:
+      - name: rabbitmq
+        image: "{{ .Values.rabbitmq.image.repository }}:{{ .Values.rabbitmq.image.tag }}"
+        imagePullPolicy: {{ .Values.rabbitmq.image.pullPolicy }}
+        env:
+        - name: BITNAMI_DEBUG
+          value: {{ .Values.rabbitmq.configuration.debug | quote }}
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: K8S_SERVICE_NAME
+          value: {{ include "rabbitmq-chart.fullname" . }}-headless
+        - name: K8S_ADDRESS_TYPE
+          value: hostname
+        - name: RABBITMQ_NODE_NAME
+          value: rabbit@$(MY_POD_NAME).$(K8S_SERVICE_NAME).$(MY_POD_NAMESPACE).svc.cluster.local
+        - name: RABBITMQ_MNESIA_DIR
+          value: /bitnami/rabbitmq/mnesia/$(RABBITMQ_NODE_NAME)
+        - name: RABBITMQ_ULIMIT_NOFILES
+          value: {{ .Values.rabbitmq.configuration.ulimitNofiles | quote }}
+        - name: RABBITMQ_USE_LONGNAME
+          value: {{ .Values.rabbitmq.configuration.useLogname | quote }}
+        - name: RABBITMQ_USERNAME
+          value: {{ .Values.rabbitmq.auth.username }}
+        {{- if .Values.rabbitmq.auth.existingSecret }}
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.rabbitmq.auth.existingSecret }}
+              key: rabbitmq-password
+        - name: RABBITMQ_ERL_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.rabbitmq.auth.existingSecret }}
+              key: rabbitmq-erlang-cookie
+        {{- else }}
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rabbitmq-chart.fullname" . }}
+              key: rabbitmq-password
+        - name: RABBITMQ_ERL_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rabbitmq-chart.fullname" . }}
+              key: rabbitmq-erlang-cookie
+        {{- end }}
+        - name: RABBITMQ_PLUGINS
+          value: {{ .Values.rabbitmq.plugins.default }}
+        ports:
+        {{- range $key, $value := .Values.rabbitmq.service.ports }}
+        - name: {{ $key }}
+          containerPort: {{ $value }}
+          protocol: TCP
+        {{- end }}
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -ec
+            - rabbitmq-diagnostics -q ping
+          failureThreshold: 6
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -ec
+            - rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms
+          failureThreshold: 3
+          initialDelaySeconds: 15
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/bash
+              - -ec
+              - |
+                {{- range $plugin := splitList "," .Values.rabbitmq.plugins.additional }}
+                rabbitmq-plugins enable {{ $plugin | trim }};
+                {{- end }}
+                until rabbitmqctl cluster_status >/dev/null; do
+                    echo "Waiting for cluster readiness..."
+                    sleep 5
+                done
+                rabbitmq-queues rebalance "all"
+        resources:
+          {{- toYaml .Values.rabbitmq.resources | nindent 10 }}
+        volumeMounts:
+        - name: configuration
+          mountPath: /bitnami/rabbitmq/conf
+        - name: data
+          mountPath: /bitnami/rabbitmq/mnesia
+      initContainers:
+      - name: volume-permissions
+        image: "{{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}"
+        imagePullPolicy: {{ .Values.initContainer.image.pullPolicy }}
+        command:
+        - /bin/bash
+        - -ec
+        - |
+          mkdir -p "/bitnami/rabbitmq/mnesia"
+          chown -R "{{ .Values.securityContext.runAsUser }}:{{ .Values.securityContext.fsGroup }}" "/bitnami/rabbitmq/mnesia"
+        resources:
+          {{- toYaml .Values.initContainer.resources | nindent 10 }}
+        volumeMounts:
+        - name: data
+          mountPath: /bitnami/rabbitmq/mnesia
+        securityContext:
+          runAsUser: 0
+      {{- with .Values.rabbitmq.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      volumes:
+      - name: configuration
+        configMap:
+          name: {{ include "rabbitmq-chart.fullname" . }}-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        {{- include "rabbitmq-chart.labels" . | nindent 8 }}
+    spec:
+      accessModes:
+      - {{ .Values.rabbitmq.persistence.accessMode }}
+      resources:
+        requests:
+          storage: {{ .Values.rabbitmq.persistence.size }}
+      {{- if .Values.rabbitmq.persistence.storageClass }}
+      storageClassName: {{ .Values.rabbitmq.persistence.storageClass }}
+      {{- end }} 

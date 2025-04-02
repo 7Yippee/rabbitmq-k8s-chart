@@ -1,0 +1,39 @@
+# 示例自定义配置
+
+# 设置自定义名称
+fullnameOverride: "rabbitmq-prod"
+# 设置部署的命名空间
+namespace: "rabbitmq-system"
+
+# RabbitMQ 配置
+rabbitmq:
+  # 部署 3 个副本
+  replicaCount: 3
+  
+  # 自定义资源限制
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+  # 持久化存储配置
+  persistence:
+    storageClass: "huawei-sc"  # 使用您的存储类
+    size: 20Gi  # 更大的存储空间
+    
+  # 集群配置
+  plugins:
+    additional: "rabbitmq_mqtt, rabbitmq_stomp, rabbitmq_web_stomp, rabbitmq_federation"
+    
+  # 节点选择器 - 在特定节点上运行
+  nodeSelector:
+    app: middleware
+    environment: production
+
+# 启用反亲和性 - 避免 Pod 运行在同一节点上
+antiAffinity:
+  enabled: true
+  weight: 100 
