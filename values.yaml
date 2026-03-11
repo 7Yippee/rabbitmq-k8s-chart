@@ -54,8 +54,7 @@ rabbitmq:
       metrics: 9419
       websocket: 15674
 
-  nodeSelector:
-    app: middleware
+  nodeSelector: {}
 
 # Init container settings
 initContainer:
