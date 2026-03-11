@@ -1,6 +1,9 @@
 name: CI - Helm Chart Lint & Image Sync
 run-name: ${{ github.actor }} triggered CI pipeline
 
+permissions:
+  contents: write  # 允许 GITHUB_TOKEN 写回仓库
+
 on:
   push:
     branches: [ "main" ]
