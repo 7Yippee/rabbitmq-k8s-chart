@@ -59,7 +59,7 @@ rabbitmq:
 # Init container settings
 initContainer:
   image:
-    repository: 192.168.3.53/base/bitnami-shell
+    repository: docker.io/bitnami/bitnami-shell
     tag: 10-debian-10-r301
     pullPolicy: IfNotPresent
   resources:
