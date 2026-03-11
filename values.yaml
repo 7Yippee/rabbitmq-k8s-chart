@@ -6,7 +6,7 @@ namespace: "default"
 # RabbitMQ settings
 rabbitmq:
   image:
-    repository: 192.168.3.53/base/rabbitmq
+    repository: registry.cn-guangzhou.aliyuncs.com/tools_y/rabbitmq
     tag: 3.9.12-debian-10-r0
     pullPolicy: IfNotPresent
   
