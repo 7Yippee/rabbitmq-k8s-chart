@@ -85,8 +85,3 @@ antiAffinity:
 serviceAccount:
   create: true
   name: "rabbitmq-cluster" 
-# vhost and diskFreeLimit config (optional)
-vhost: ""  # Uncomment to set a specific vhost
-diskFreeLimit: "50MB"  # disk free limit
-totalMemoryAvailable: "8589934592"  # 8GB in bytes
-memoryHighWatermark: "0.4"  # memory high watermark 
