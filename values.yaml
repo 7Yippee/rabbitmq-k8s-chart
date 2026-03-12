@@ -62,8 +62,8 @@ rabbitmq:
 # Init container settings
 initContainer:
   image:
-    repository: registry.cn-guangzhou.aliyuncs.com/tools_y/bitnami-shell
-    tag: 10-debian-10-r301
+    repository: registry.cn-guangzhou.aliyuncs.com/tools_y/rabbitmq
+    tag: 3.9.12-debian-10-r0
     pullPolicy: IfNotPresent
   resources:
     limits:
