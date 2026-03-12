@@ -3,6 +3,9 @@ nameOverride: ""
 fullnameOverride: ""
 namespace: "default"
 
+imagePullSecrets:
+  - aliyun-registry
+
 # RabbitMQ settings
 rabbitmq:
   image:

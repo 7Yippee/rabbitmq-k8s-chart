@@ -18,6 +18,12 @@ spec:
       labels:
         {{- include "rabbitmq-chart.labels" . | nindent 8 }}
     spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+      {{- end }}
+      {{- end }}
       {{- if .Values.antiAffinity.enabled }}
       affinity:
         podAntiAffinity:
