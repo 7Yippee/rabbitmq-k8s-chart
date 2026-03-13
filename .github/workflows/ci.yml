@@ -14,6 +14,8 @@ on:
 env:
   REGISTRY: registry.cn-guangzhou.aliyuncs.com
   NAMESPACE: tools_y
+  # Source image for syncing into ACR (keeps cluster pulling only from ACR)
+  SOURCE_IMAGE: docker.io/bitnami/rabbitmq:latest
 
 jobs:
   # ==================== 第一步: Helm Chart 校验 ====================
@@ -48,8 +50,9 @@ jobs:
       - name: Extract image info from values.yaml
         id: extract
         run: |
-          REPO=$(grep 'repository:' values.yaml | head -1 | awk '{print $2}')
-          TAG=$(grep 'tag:' values.yaml | head -1 | awk '{print $2}')
+          SOURCE_IMAGE="${{ env.SOURCE_IMAGE }}"
+          REPO="${SOURCE_IMAGE%:*}"
+          TAG="${SOURCE_IMAGE##*:}"
           echo "source_image=${REPO}:${TAG}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           # 从 repository 路径中提取镜像名 (最后一段)
