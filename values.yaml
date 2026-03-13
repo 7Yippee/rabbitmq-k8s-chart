@@ -9,7 +9,7 @@ imagePullSecrets:
 # RabbitMQ settings
 rabbitmq:
   image:
-    repository: docker.io/bitnami/rabbitmq
+    repository: registry.cn-guangzhou.aliyuncs.com/tools_y/rabbitmq
     tag: latest
     pullPolicy: IfNotPresent
   
@@ -62,7 +62,7 @@ rabbitmq:
 # Init container settings
 initContainer:
   image:
-    repository: docker.io/bitnami/rabbitmq
+    repository: registry.cn-guangzhou.aliyuncs.com/tools_y/rabbitmq
     tag: latest
     pullPolicy: IfNotPresent
   resources:
