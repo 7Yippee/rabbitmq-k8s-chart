@@ -15,7 +15,7 @@ env:
   REGISTRY: registry.cn-guangzhou.aliyuncs.com
   NAMESPACE: tools_y
   # Source image for syncing into ACR (keeps cluster pulling only from ACR)
-  SOURCE_IMAGE: docker.io/bitnami/rabbitmq:latest
+  SOURCE_IMAGE: docker.io/bitnami/rabbitmq:4.2
 
 jobs:
   # ==================== 第一步: Helm Chart 校验 ====================

@@ -10,7 +10,7 @@ imagePullSecrets:
 rabbitmq:
   image:
     repository: registry.cn-guangzhou.aliyuncs.com/tools_y/rabbitmq
-    tag: latest
+    tag: 4.2
     pullPolicy: IfNotPresent
   
   replicaCount: 1
@@ -63,7 +63,7 @@ rabbitmq:
 initContainer:
   image:
     repository: registry.cn-guangzhou.aliyuncs.com/tools_y/rabbitmq
-    tag: latest
+    tag: 4.2
     pullPolicy: IfNotPresent
   resources:
     limits:
