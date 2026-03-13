@@ -72,20 +72,26 @@ jobs:
 
       - name: Sync image to Aliyun ACR
         run: |
+          set -euo pipefail
           SOURCE="${{ steps.extract.outputs.source_image }}"
           TARGET="${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ steps.extract.outputs.image_name }}:${{ steps.extract.outputs.tag }}"
           echo "🚀 Syncing: $SOURCE -> $TARGET"
-          skopeo copy --all \
+          if ! skopeo copy --all \
             --dest-creds "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" \
-            "docker://$SOURCE" "docker://$TARGET" || echo "⚠️ Skopeo copy failed, trying docker pull/push..."
-
-          # Fallback: docker pull + tag + push
-          if [ $? -ne 0 ]; then
+            "docker://$SOURCE" "docker://$TARGET"; then
+            echo "⚠️ Skopeo copy failed, trying docker pull/push..."
             docker pull "$SOURCE"
             docker tag "$SOURCE" "$TARGET"
             docker push "$TARGET"
           fi
           echo "✅ Image synced: $TARGET"
+
+      - name: Verify target has arm64
+        run: |
+          set -euo pipefail
+          TARGET="${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ steps.extract.outputs.image_name }}:${{ steps.extract.outputs.tag }}"
+          skopeo inspect --raw "docker://$TARGET" | grep -q '"architecture":"arm64"'
+          echo "✅ arm64 present in $TARGET"
 
   # ==================== 第三步: 更新 Chart 中的镜像地址指向阿里云 ====================
   update-chart:
